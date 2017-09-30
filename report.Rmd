@@ -1,0 +1,800 @@
+Wine Quality Exploration by James Lipe
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(lattice)
+library(GGally)
+library(psych)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+WD <- read.csv('wineQualityReds.csv')
+```
+
+> This clean dataset contains 1,599 red wines with 11 chemical properties of
+the wine and a quality rating between 0 (horrible) and 10 (exceptional).
+
+# Univariate Plots Section
+
+```{r echo=FALSE, Univariate_Plots}
+str(WD)
+
+summary(WD)
+
+plot.hist <- function(x.var, df, bw, xlab){
+  ggplot(df, aes_string(x = x.var)) + 
+    geom_histogram(binwidth = bw) + 
+    xlab(xlab)
+}
+
+print.n.outliers <- function(x.var, df){
+  IQR <- quantile(df[, x.var])[4] - quantile(df[, x.var])[2]
+  
+  n.outliers.positive <- nrow(subset(df, 
+                      df[, x.var] > (quantile(df[, x.var])[4] + 1.5 * IQR)))
+  
+  n.outliers.negative <- nrow(subset(WD, 
+                      df[, x.var] < (quantile(df[, x.var])[2] - 1.5 * IQR)))
+
+
+
+cat("Number of positive outliers: ", n.outliers.positive, "\n")
+cat("Number of negative outliers: ", n.outliers.negative)
+}
+
+print.n.outliers("residual.sugar", WD)
+```
+
+An ititial summary gives an overview of the data set.
+```{r echo=FALSE}
+summary(WD$residual.sugar)
+
+ggplot(aes(x = as.factor(quality)), data = WD)+
+       geom_bar()+
+       xlab("Wine Quality rating") + ylab("Count")
+```  
+
+The distribution of quality is normally shaped with a low of 3 and a high of 8.
+Most observations are either a 5 or 6. The posible values of quality score 
+that could have been given were from 0 to 10.
+
+```{r echo=FALSE}
+p.sugar <- plot.hist('residual.sugar', WD, 0.2, 'residual sugar (g / dm^3)') + 
+  scale_x_continuous(breaks = seq(0, 16))
+
+p.sugar
+```
+
+Residual sugar is positively skewed, plotting the histogram next to a box plot 
+
+will help make sense of the distribution.
+```{r echo=FALSE}
+p.sugar.box <- ggplot(WD, aes(x = 1, y = residual.sugar)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("residual sugar (g / dm^3)")
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.sugar, p.sugar.box, ncol=2)
+```
+
+The box plot above shows the very large number of positive outliers.
+The number of outliers is caluclated and printed out below.
+
+```{r echo=FALSE}
+print.n.outliers("residual.sugar", WD)
+```
+
+For a dataset of 1,599 observations that makes %9.7 of the data outliers. 
+This is clearly not an error in measurement and the outliers will remain 
+in the dataset.
+
+```{r echo=FALSE}
+ggplot(WD, aes(x = residual.sugar)) + 
+  geom_histogram(binwidth = .05) + 
+  xlab("log(residual sugar)") + 
+  scale_x_log10()
+```
+
+Plotting the residual sugar histogram on a logarithmic scale creates a more 
+normal distribution of data.
+
+```{r echo=FALSE}
+p.chlorides <- plot.hist('chlorides', WD, 0.01, 'chlorides (g / dm^3)') + 
+  scale_x_continuous()
+
+p.chlorides
+```
+
+The chloride distribution is positively skewed and its box plot is below.
+
+```{r echo=FALSE}
+p.chlorides.box <- ggplot(WD, aes(x = 1, y = chlorides)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("chlorides (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.chlorides, p.chlorides.box, ncol=2)
+```
+
+The chloride distribution looks a lot like the residual sugar distribution, with 
+the addition of some outliers in the negative direction as well. The number of 
+positive and negative outliers is printed below.
+
+```{r echo=FALSE}
+print.n.outliers('chlorides', WD)
+```
+
+These outliers seem like valid measurements and will be left in the data set.
+
+```{r echo=FALSE}
+ggplot(WD, aes(x = chlorides)) + 
+  geom_histogram(binwidth = .025) + 
+  xlab("log(chlorides)") + 
+  scale_x_log10()
+```
+
+Plotting the chloride data on a logarithmic scale makes the distribution more 
+normal.
+
+```{r echo=FALSE}
+p.sulphates <- plot.hist('sulphates', WD, 0.02, 
+                         'sulphates (potassium sulphate - g / dm3)') + 
+  scale_x_continuous()
+
+p.sulphates
+```
+
+Sulphate distribution is also positively skewed but the distribution is more 
+compact than the that of sugars or chlorides. Once again a box plot can help 
+visualise outliers.
+
+```{r echo=FALSE}
+p.sulphates.box <- ggplot(WD, aes(x = 1, y = sulphates)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("sulphates (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.sulphates, p.sulphates.box, ncol=2)
+
+print.n.outliers('sulphates', WD)
+```
+
+The 59 sulphate outliers will remain in the data set.
+
+
+```{r echo=FALSE}
+p.alcohol <- plot.hist('alcohol', WD, 0.1, 'alcohol (% by volume)') +
+  scale_x_continuous()
+
+p.alcohol
+```
+
+Alcohol % data looks slightly positively skewed based on the histogram above.
+
+```{r echo=FALSE}
+p.alcohol.box <- ggplot(WD, aes(x = 1, y = alcohol)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("alcohol (% by volume)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.alcohol, p.alcohol.box, ncol=2)
+
+print.n.outliers('alcohol', WD)
+```
+
+There are only 13 outliers for the alcohol distribution.
+
+```{r echo=FALSE}
+p.fixed.acidity <- plot.hist('fixed.acidity', WD, 0.2, 
+                             'fixed acidity  (tartaric acid - g / dm^3)') +
+  scale_x_continuous()
+
+p.fixed.acidity
+```
+
+The fixed acidity distribution looks slightly positively skewed.
+
+```{r echo=FALSE}
+p.fixed.acidity.box <- ggplot(WD, aes(x = 1, y = fixed.acidity)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("fixed acidity  (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.fixed.acidity, p.fixed.acidity.box, ncol=2)
+
+print.n.outliers('fixed.acidity', WD)
+```
+
+
+```{r echo=FALSE}
+p.volatile.acidity <- plot.hist('volatile.acidity', WD, 0.02, 
+                                'volatile acidity (acetic acid - g / dm^3)') +
+  scale_x_continuous()
+
+p.volatile.acidity
+```
+The volatile acid distribution looks bimodal with a positive skew.
+
+```{r echo=FALSE}
+p.volatile.acidity.box <- ggplot(WD, aes(x = 1, y = volatile.acidity)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("volatile acidity  (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.volatile.acidity, p.volatile.acidity.box, ncol=2)
+
+print.n.outliers('volatile.acidity', WD)
+```
+
+```{r echo=FALSE}
+p.citric.acid <- plot.hist('citric.acid', WD, 0.01, 'citric acid (g / dm^3)') +
+  scale_x_continuous()
+
+p.citric.acid
+```
+
+The spikes at 0.0 and 0.5 indicate a measurement rounding. There is also a slight 
+spike at 0.25, this should be taken into account when discussing the citric acid 
+data.
+
+```{r echo=FALSE}
+p.citric.acid.box <- ggplot(WD, aes(x = 1, y = citric.acid)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("citric acid  (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.citric.acid, p.citric.acid.box, ncol=2)
+
+print.n.outliers('citric.acid', WD)
+```
+
+The one positive outlier of 1.0, combined with the observed spikes at 0.0, 0.25 
+and 0.5 does indicate a observation that should be removed from the data set. 
+This value is removed for the remainder of this investigation.
+
+```{r echo=FALSE}
+WD <- subset(WD, WD$citric.acid != max(WD$citric.acid))
+```
+
+```{r echo=FALSE}
+p.free.sulfur.dioxide <- plot.hist('free.sulfur.dioxide', WD, 1, 
+                              'free sulfur dioxide (mg / dm^3)') +
+  scale_x_continuous()
+
+p.free.sulfur.dioxide
+```
+
+```{r echo=FALSE}
+p.free.sulfur.dioxide.box <- ggplot(WD, aes(x = 1, y = free.sulfur.dioxide)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("free sulfur dioxide  (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.free.sulfur.dioxide, p.free.sulfur.dioxide.box, ncol=2)
+
+print.n.outliers('free.sulfur.dioxide', WD)
+```
+
+These outliers are believed to be valid measurements and are left in the dataset.
+
+```{r echo=FALSE}
+p.total.sulfur.dioxide <- plot.hist('total.sulfur.dioxide', 
+                                    WD, 3, 'total sulfur dioxide (mg / dm^3)') +
+  scale_x_continuous()
+
+p.total.sulfur.dioxide
+```
+
+Total sulfur dioxide is again positively skewed. There are a few observations 
+near 300 that look very far removed from the rest of the distribution. 
+
+```{r echo=FALSE}
+p.total.sulfur.dioxide.box <- ggplot(WD, aes(x = 1, y = total.sulfur.dioxide)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("total sulfur dioxide  (g / dm^3)") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.total.sulfur.dioxide, p.total.sulfur.dioxide.box, ncol=2)
+
+print.n.outliers('total.sulfur.dioxide', WD)
+```
+
+There are more outliers than just the two near 300 mg/dm^3. The two outliers 
+near 300 are so large they are likely errors and will be removed from the 
+data set.
+
+```{r echo=FALSE}
+WD <- subset(WD, WD$total.sulfur.dioxide < 200)
+```
+
+```{r echo=FALSE}
+plot.hist('density', WD, .0005, 'density (g / cm^3)') +
+  scale_x_continuous()
+
+plot.hist('pH', WD, .05, 'pH') +
+  scale_x_continuous()
+```
+
+Density and pH are normally distributed.
+
+
+Instead of looking at total sulfur dioxide and free sulfur dioxide a new 
+variable can be created that is the ratio of free sulfur dioxide.
+
+```{r echo=FALSE}
+WD$sulfur.dioxide.ratio <- WD$free.sulfur.dioxide / WD$total.sulfur.dioxide
+
+p.sulfur.dioxide.ratio <- plot.hist('sulfur.dioxide.ratio', WD, .02, 
+                                    'sulfur dioxide ratio') + 
+  scale_x_continuous()
+
+p.sulfur.dioxide.ratio
+```
+
+Sulfur dioxide ratio is normally distributed. The spike at 0.25 and possibly at 
+0.5 and 0.75 should be noted as possible measurement roundings.
+
+```{r echo=FALSE}
+p.sulfur.dioxide.ratio.box <- ggplot(WD, aes(x = 1, y = sulfur.dioxide.ratio)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab("sulfur dioxide ratio") + 
+                      scale_x_continuous(breaks = NULL)
+
+grid.arrange(p.sulfur.dioxide.ratio, p.sulfur.dioxide.ratio.box, ncol=2)
+
+print.n.outliers('sulfur.dioxide.ratio', WD)
+```
+
+Other variables that may be of interest are the total acid content, and ratio's 
+of certain types of acid (fixed, volatile, and citric) to the total acid content.
+The way these acid amounts affect the the wine could lead to insights.
+
+```{r echo=FALSE}
+WD$total.acidity <- WD$citric.acid + WD$volatile.acidity + WD$fixed.acidity
+ggplot(aes(x = total.acidity), data = WD) + 
+  scale_x_log10() + 
+  xlab('log10(citric.acid + volatile.acidity + fixed.acidity)') + 
+  geom_histogram()
+```
+
+To gain information about which variables affect wine quality the data has a 
+ordered factor added of low, medium, and high quality added. A low, medium, and 
+high quality wine is defined as a score of 3 or 4, 5 or 6, and 7 or 8 
+respectively. 
+
+```{r echo=FALSE}
+WD$quality.grade <- recode_factor(WD$quality, `3` = 'low', `4` = 'low', `5` = 'medium', 
+              `6` = 'medium', `7` = 'high', `8` = 'high')
+
+WD$quality.grade <- ordered(WD$quality.grade, levels = c('low', 'medium', 'high'))
+```
+
+###High quality summary
+```{r echo=FALSE}
+summary(subset(WD, WD$quality.grade == 'high'))
+```
+###Low quality summary
+```{r echo=FALSE}
+summary(subset(WD, WD$quality.grade == 'low'))
+```
+
+# Univariate Analysis
+
+
+### What is the structure of your dataset?
+
+There are 1599 red wines in this data set with 12 features (fixed acidity,
+volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide,
+total sulfur dioxide, density, pH, sulphates, alcohol, and quality)
+
+All properties with the exception of quality are chemical properties of the 
+wine. Quality is a score between 1 and 10 rated by at least 3 wine experts.
+
+Observations:
+
+* The quality score ranges from 3 to 8 with most wines being scored a 5 or 6
+
+* The median quality is a 6, the mean is a 5.636
+
+* Residual sugar, chlorides, sulphates, fixed acidity, and sulfur dioxide 
+are long tailed data
+
+
+### What is/are the main feature(s) of interest in your dataset?
+
+The main feature of interest in the data set is the quality score. Although 
+quality is a subjective measure it is the ultimate thing of interest to wine 
+manufacturers and consumers. Additionally, alcohol content is another variable 
+of interest to some wine consumers. Some may value a high alcohol content wine 
+even if it results in a lower quality score.
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest?
+
+Investigating the chemical properties of the wine and their affect on quality 
+is the goal of this analysis. Based on the univariate plots and summary data 
+it appears that the main properties affecting quality are acid content, alcohol 
+content, and sulphates. These relationships are explored further in the 
+bivaraite and multivariate sections. 
+
+
+### Did you create any new variables from existing variables in the dataset?
+
+A new variable sulfur dioxide ratio was created from free sulfur dioxide and 
+total sulfur dioxide. A variable of total acid content was created from the 
+sum of volatile, free, and citric acid. A ordered factor was created from the 
+quality variable with low, medium, and high quality wines being scored a 
+3 or 4, 5 or 6, and 7 or 8 respectively.
+
+### Of the features you investigated, were there any unusual distributions? \
+Did you perform any operations on the data to tidy, adjust, or change the form \
+of the data? If so, why did you do this?
+
+Residual sugar, chlorides, sulphates, and sulfur dioxide are all positively 
+skewed long tailed data. 
+
+Volatile acidity looks to be a bimodal distribution. The strangest distribution 
+is with the citric acid content; there are large spikes at 0, .25 and .5 g/dm^3. 
+This citric acid distribution is likely because of measurement rounding.
+
+
+# Bivariate Plots Section
+
+Plotting each variable against one another is a good way to start the bivariate 
+analysis.
+
+```{r echo=FALSE, Bivariate_Pair_Plots}
+pair.vars <- c("fixed.acidity", "volatile.acidity", "citric.acid", "total.acidity",
+               "residual.sugar", "chlorides", "free.sulfur.dioxide", 
+               "total.sulfur.dioxide", "sulphates", "alcohol", "pH", "quality")
+
+WD.for.pairs <- WD[pair.vars]
+
+pairs.panels(WD.for.pairs, gap = 0, pch = '.')
+```
+
+Looking at the correlation values, quality is positively correlated with alcohol, 
+sulphates, and citric acid. Quality is negatively correlated with volatile 
+acidity. Alcohol is positively correlated with pH and negatively correlated 
+with total sulfur dioxide, chlorides and volatile acidity. These will be the 
+relationships the bivariate analysis focuses on.
+
+```{r echo=FALSE}
+ggplot(data = WD, aes(x = quality, y = alcohol)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+
+ggplot(data = WD, aes(x = quality, y = sulphates)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+
+ggplot(data = WD, aes(x = quality, y = citric.acid)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+
+ggplot(data = WD, aes(x = quality, y = fixed.acidity)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+
+ggplot(data = WD, aes(x = quality, y = total.acidity)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+
+ggplot(data = WD, aes(x = quality, y = volatile.acidity)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+```
+
+The box plots above give a clearer overview of how alcohol content, volatile 
+acidity, citric acid, and sulphates relate to quality. Visualizing these data 
+by overlaying the distribution's with box plots makes these relationships clearer.
+
+```{r echo=FALSE}
+p1 <- ggplot(subset(WD, quality.grade=='low'), aes(volatile.acidity, x = 1)) +
+  geom_boxplot(color = 'red') +
+  geom_jitter(data = subset(WD, quality.grade=='low'), 
+              aes(x = 1, y = volatile.acidity[quality.grade=='low']), alpha = 0.3) +
+  scale_y_continuous(limits = c(0, 1.75)) +
+  labs(y = 'Volatile Acidity (g/L)', x = '',
+          title = "Low quality distribution") +
+  coord_flip()
+
+p2 <- ggplot(subset(WD, quality.grade=='high'), aes(volatile.acidity, x = 1)) +
+  geom_boxplot(color = 'green') +
+  geom_jitter(data = subset(WD, quality.grade=='high'), 
+              aes(x = 1, y = volatile.acidity[quality.grade=='high']), alpha = 0.3) +
+  scale_y_continuous(limits = c(0, 1.75)) +
+  labs(y = 'Volatile Acidity (g/L)', x = '',
+          title = "High quality distribution") +
+  coord_flip()
+
+
+grid.arrange(p1, p2)
+
+p1 <- ggplot(subset(WD, quality.grade=='low'), aes(alcohol, x = 1)) +
+  geom_boxplot(color = 'red') +
+  geom_jitter(data = subset(WD, quality.grade=='low'), 
+              aes(x = 1, y = alcohol[quality.grade=='low']), alpha = 0.3) +
+  scale_y_continuous(limits = c(8, 14.1)) +
+  labs(y = '% Alcohol', x = '',
+          title = "Low quality distribution") +
+  coord_flip()
+
+p2 <- ggplot(subset(WD, quality.grade=='high'), aes(alcohol, x = 1)) +
+  geom_boxplot(color = 'green') +
+  geom_jitter(data = subset(WD, quality.grade=='high'), 
+              aes(x = 1, y = alcohol[quality.grade=='high']), alpha = 0.3) +
+  scale_y_continuous(limits = c(8, 14.1)) +
+  labs(y = '% Alcohol', x = '',
+          title = "High quality distribution") +
+  coord_flip()
+
+
+grid.arrange(p1, p2)
+
+p1 <- ggplot(subset(WD, quality.grade=='low'), aes(citric.acid, x = 1)) +
+  geom_boxplot(color = 'red') +
+  geom_jitter(data = subset(WD, quality.grade=='low'), 
+              aes(x = 1, y = citric.acid[quality.grade=='low']), alpha = 0.3) +
+  scale_y_continuous(limits = c(-0.1, 1.1)) +
+  labs(y = 'Citric Acidity', x = '',
+          title = "Low quality distribution") +
+  coord_flip()
+
+p2 <- ggplot(subset(WD, quality.grade=='high'), aes(citric.acid, x = 1)) +
+  geom_boxplot(color = 'green') +
+  geom_jitter(data = subset(WD, quality.grade=='high'), 
+              aes(x = 1, y = citric.acid[quality.grade=='high']), alpha = 0.3) +
+  scale_y_continuous(limits = c(-0.1, 1.1)) +
+  labs(y = 'Citric Acidity', x = '',
+          title = "High quality distribution") +
+  coord_flip()
+
+
+grid.arrange(p1, p2)
+```
+
+The other variable of interest, alcohol, is a continuous variable and 
+better explored using scatter plots.
+
+```{r echo=FALSE}
+ggplot(data = WD, aes(x = alcohol, y = pH)) + 
+  geom_point(position = 'jitter', alpha = 0.25)
+
+ggplot(data = WD, aes(x = alcohol, y = total.sulfur.dioxide)) + 
+  geom_point(position = 'jitter', alpha = 0.25)
+
+ggplot(data = WD, aes(x = alcohol, y = volatile.acidity)) + 
+  geom_point(position = 'jitter', alpha = 0.25)
+
+ggplot(data = WD, aes(x = alcohol, y = chlorides)) + 
+  geom_point(position = 'jitter', alpha = 0.25)
+```
+
+The relationships between alcohol and its correlated variables is not clear from 
+the scatter plots. 
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the data set?
+
+The feature of interest in the data set (quality) varied with alcohol content, 
+volatile acidity, citric acid, and suphates. The strongest correlations 
+are with alcohol content, volatile acidity and citric acid content.
+
+When looking at the distributions of volatile acidity split by quality grade 
+outliers can be seen for both high and low quality wines. However, 5 of the 6 
+outliers for the high quality wines aren't even larger than Q3 for the low 
+quality wines. 
+
+Looking at the citric acid content of the high quality wines it is observed 
+that although the median of the distribution lies higher than the low quality 
+wines, there are a significant number of low values. There are even some outliers 
+in the high quality distribution with a citric acid content of 0.
+
+
+### What was the strongest relationships you found?
+
+The strongest relationship found is between the alcohol content and the quality. 
+As alcohol content increases so does the quality of the wine. The other strong 
+relationships are between citric acid content and quality; and volatile acid 
+content and quality. As citric acid content increases so does the quality of wine. 
+As volatile acid content decreases so does the quality of the wine. 
+
+
+# Multivariate Plots Section
+
+```{r echo=FALSE}
+ggplot(data = WD, aes(x = alcohol, y = citric.acid)) + 
+  geom_point(alpha = .25) + 
+  facet_wrap(~quality.grade)
+
+ggplot(data = WD, aes(x = alcohol, y = volatile.acidity)) + 
+  geom_point(alpha = .25) + 
+  facet_wrap(~quality.grade)
+
+ggplot(data = WD, aes(x = alcohol, y = total.sulfur.dioxide)) + 
+  geom_point(alpha = .25) + 
+  facet_wrap(~quality.grade)
+
+ggplot(data = WD, aes(x = alcohol, y = chlorides)) + 
+  geom_point(alpha = .25) + 
+  facet_wrap(~quality.grade)
+```
+
+The side by side plots of variables of interest vs. alcohol split by quality 
+grade make the relationships clearer. As noted before, the horizontal lines 
+on the citric acid plots are visible. The low quality wines are split with 
+about half having a volatile acidity of above 0.8 g/dm^3, almost all the high 
+quality wines have volatile acidity lower than 0.8 g/dm^3.
+
+Removing the medium quality wines (score 5 or 6) and coloring the low and high 
+quality wines makes it easier to visualize the relationship between quality, and 
+the variables of interest.
+
+
+```{r echo=FALSE, Multivariate_Plots}
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = citric.acid, y = volatile.acidity, 
+                      color = quality.grade)) + 
+  geom_point()
+
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = total.acidity, y = volatile.acidity, 
+                      color = quality.grade)) + 
+  geom_point()
+
+
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = alcohol, y = total.acidity, 
+                     color = quality.grade)) + 
+  geom_point()
+
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = alcohol, y = citric.acid, 
+                     color = quality.grade)) + 
+  geom_point()
+
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = alcohol, y = sulphates, 
+                     color = quality.grade)) + 
+  geom_point()
+
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = alcohol, y = chlorides, 
+                     color = quality.grade)) + 
+  scale_y_log10() +
+  geom_point()
+```
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. Were there features that strengthened each other in terms of \
+looking at your feature(s) of interest?
+
+By looking at separated values of low and high quality wines the relationship 
+between these variables is made clearer. Low citric acid content correlates with 
+low quality wine (with the exception of some outliers). High alcohol content and 
+high citric acid content correlate with high quality wine.
+
+### Were there any interesting or surprising interactions between features?
+
+It is surprising that high alcohol content correlates with high quality. It is 
+interesting that citric acid plays such an important role in determining the quality 
+of the wine.
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(data = WD, aes(x = quality, y = citric.acid)) + 
+  ggtitle("Citric Acid vs Quality") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_x_discrete(limits = seq(3, 8)) + 
+  geom_boxplot(aes(group = cut_width(quality, 1), color = quality.grade), outlier.alpha = 0.5) + 
+  scale_color_manual(values=c("#ff0000", "#0000ff", "#008000")) + 
+  labs(color = 'Quality Grade', x='Quality', y = 'Citric Acid (g / dm^3)')
+```
+
+### Description One
+This box plot was chosen because it shows the relationship between quality and 
+citric acid content. As quality increases so does citric acidity.
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(data = subset(WD, quality.grade != 'medium'), 
+                     aes(x = total.acidity, y = volatile.acidity, 
+                      color = quality.grade)) + 
+  ggtitle("Volatile Acidity vs. Total Acidity") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  labs(color = 'Quality Grade', y = "Volatile Acidity (g / dm^3)", x = "Total Acidity (g / dm^3)") + 
+  geom_point(alpha = 0.5)
+
+```
+
+### Description Two
+An interesting feature of this plot is that as total acidity increases, volatile 
+acidity decreases. Since total acidity is a function of volatile acidity, this
+result was unexpected. This plot was chosen because it shows that high quality 
+wines have both low and high total acidity. However, mostly the low quality wines 
+have high volatile acidity. This demonstrates that the decline in wine quality as 
+acid content increases is not because of the increase in acidity, but in the 
+decrease of volatile acidity and the increase in citric acid content. 
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(data = WD, aes(x = alcohol, y = quality, color = quality.grade)) + 
+  geom_point(position = 'jitter', alpha = 0.5) + 
+  ggtitle("Quality vs. % Alcohol") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_color_manual(values=c("#ff0000", "#0000ff", "#008000")) + 
+  labs(x = '% Alcohol', y = 'Quality', color = 'Quality Grade')
+```
+
+### Description Three
+This plot was chosen because it conveys one of the most interesting findings of 
+this investigation. As alcohol content increases so does the quality of wine. 
+High and medium quality wine are both above and below %12 alcohol, but above %12 
+all the wine (with the exception of one) is either high or medium quality. 
+
+------
+
+# Reflection
+
+This exploratory data analysis produced some interesting findings about what variables
+affect wine quality. The clearest findings are that volatile acid content negatively 
+affects quality, citric acid and alcohol content positively affect wine quality. 
+
+Total acidity doesn't seem to have much of an affect on the quality outcome. This 
+could be because as total acidity increases it is because of an increase in both 
+citric acid and volatile acidity. Since these are oppositely correlated they could 
+be cancelling each other out and not affecting quality.
+
+There are only 1599 wines in this data set, with 1,319 of those falling in the medium 
+quality category. This left the investigation with a relatively low amount of wines 
+in the low and high quality category. Additionally, the distribution of quality scores 
+ranged from 3 to 8, it would be interesting to see how wines that score 9 or 10 would 
+compare with the results found in this investigation. 
+
+It is also important to note that the quality of wine is a subjective measure. Who 
+were the wine experts judging these wines? It is possible they have a taste for 
+wine with a high citric acid content and high alcohol.
