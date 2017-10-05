@@ -1,3 +1,10 @@
+---
+title: "Wine Quality Exploration"
+author: James Lipe
+date: September 22, 2017
+output: md_document
+---
+
 Wine Quality Exploration by James Lipe
 ========================================================
 
@@ -15,6 +22,7 @@ Wine Quality Exploration by James Lipe
 # want it to. This will clean up the flow of your report.
 
 library(ggplot2)
+library(shiny)
 library(dplyr)
 library(gridExtra)
 library(lattice)
@@ -58,10 +66,19 @@ cat("Number of positive outliers: ", n.outliers.positive, "\n")
 cat("Number of negative outliers: ", n.outliers.negative)
 }
 
-print.n.outliers("residual.sugar", WD)
+plot.box <- function(x.var, df, ylab){
+            ggplot(df, aes_string(x = '1', y = x.var)) + 
+                      geom_jitter(alpha = 0.1) + 
+                      geom_boxplot(alpha = 0.2, color = 'red') + 
+                      xlab("") + 
+                      ylab(ylab) + 
+                      scale_x_continuous(breaks = NULL) + 
+                      coord_flip()
+    
+}
 ```
 
-An ititial summary gives an overview of the data set.
+An initial summary gives an overview of the data set.
 ```{r echo=FALSE}
 summary(WD$residual.sugar)
 
@@ -71,7 +88,7 @@ ggplot(aes(x = as.factor(quality)), data = WD)+
 ```  
 
 The distribution of quality is normally shaped with a low of 3 and a high of 8.
-Most observations are either a 5 or 6. The posible values of quality score 
+Most observations are either a 5 or 6. The possible values of quality score 
 that could have been given were from 0 to 10.
 
 ```{r echo=FALSE}
@@ -81,40 +98,25 @@ p.sugar <- plot.hist('residual.sugar', WD, 0.2, 'residual sugar (g / dm^3)') +
 p.sugar
 ```
 
-Residual sugar is positively skewed, plotting the histogram next to a box plot 
+Residual sugar is positively skewed, plotting a box plot of the data will help 
+make sense of the distribution.
 
-will help make sense of the distribution.
 ```{r echo=FALSE}
-p.sugar.box <- ggplot(WD, aes(x = 1, y = residual.sugar)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("residual sugar (g / dm^3)")
-                      scale_x_continuous(breaks = NULL)
+p.sugar.box <- plot.box('residual.sugar', WD, 'residual sugar (g / dm^3)')
 
-grid.arrange(p.sugar, p.sugar.box, ncol=2)
+p.sugar.box
 ```
 
 The box plot above shows the very large number of positive outliers.
-The number of outliers is caluclated and printed out below.
+The number of outliers is calculated and printed out below.
 
 ```{r echo=FALSE}
 print.n.outliers("residual.sugar", WD)
 ```
 
-For a dataset of 1,599 observations that makes %9.7 of the data outliers. 
+For a data set of 1,599 observations that makes %9.7 of the data outliers. 
 This is clearly not an error in measurement and the outliers will remain 
-in the dataset.
-
-```{r echo=FALSE}
-ggplot(WD, aes(x = residual.sugar)) + 
-  geom_histogram(binwidth = .05) + 
-  xlab("log(residual sugar)") + 
-  scale_x_log10()
-```
-
-Plotting the residual sugar histogram on a logarithmic scale creates a more 
-normal distribution of data.
+in the data set.
 
 ```{r echo=FALSE}
 p.chlorides <- plot.hist('chlorides', WD, 0.01, 'chlorides (g / dm^3)') + 
@@ -126,14 +128,9 @@ p.chlorides
 The chloride distribution is positively skewed and its box plot is below.
 
 ```{r echo=FALSE}
-p.chlorides.box <- ggplot(WD, aes(x = 1, y = chlorides)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("chlorides (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.chlorides.box <- plot.box('chlorides', WD, 'chlorides (g / dm^3)')
 
-grid.arrange(p.chlorides, p.chlorides.box, ncol=2)
+p.chlorides.box
 ```
 
 The chloride distribution looks a lot like the residual sugar distribution, with 
@@ -147,16 +144,6 @@ print.n.outliers('chlorides', WD)
 These outliers seem like valid measurements and will be left in the data set.
 
 ```{r echo=FALSE}
-ggplot(WD, aes(x = chlorides)) + 
-  geom_histogram(binwidth = .025) + 
-  xlab("log(chlorides)") + 
-  scale_x_log10()
-```
-
-Plotting the chloride data on a logarithmic scale makes the distribution more 
-normal.
-
-```{r echo=FALSE}
 p.sulphates <- plot.hist('sulphates', WD, 0.02, 
                          'sulphates (potassium sulphate - g / dm3)') + 
   scale_x_continuous()
@@ -166,17 +153,12 @@ p.sulphates
 
 Sulphate distribution is also positively skewed but the distribution is more 
 compact than the that of sugars or chlorides. Once again a box plot can help 
-visualise outliers.
+visualize outliers.
 
 ```{r echo=FALSE}
-p.sulphates.box <- ggplot(WD, aes(x = 1, y = sulphates)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("sulphates (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.sulphates.box <- plot.box('sulphates', WD, 'sulphates (g / dm^3)')
 
-grid.arrange(p.sulphates, p.sulphates.box, ncol=2)
+p.sulphates.box
 
 print.n.outliers('sulphates', WD)
 ```
@@ -194,14 +176,9 @@ p.alcohol
 Alcohol % data looks slightly positively skewed based on the histogram above.
 
 ```{r echo=FALSE}
-p.alcohol.box <- ggplot(WD, aes(x = 1, y = alcohol)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("alcohol (% by volume)") + 
-                      scale_x_continuous(breaks = NULL)
+p.alcohol.box <- plot.box('alcohol', WD, 'alcohol (% by volume)')
 
-grid.arrange(p.alcohol, p.alcohol.box, ncol=2)
+p.alcohol.box
 
 print.n.outliers('alcohol', WD)
 ```
@@ -219,14 +196,9 @@ p.fixed.acidity
 The fixed acidity distribution looks slightly positively skewed.
 
 ```{r echo=FALSE}
-p.fixed.acidity.box <- ggplot(WD, aes(x = 1, y = fixed.acidity)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("fixed acidity  (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.fixed.acidity.box <- plot.box('fixed.acidity', WD, 'fixed acidity (g / dm^3)')
 
-grid.arrange(p.fixed.acidity, p.fixed.acidity.box, ncol=2)
+p.fixed.acidity.box
 
 print.n.outliers('fixed.acidity', WD)
 ```
@@ -239,17 +211,13 @@ p.volatile.acidity <- plot.hist('volatile.acidity', WD, 0.02,
 
 p.volatile.acidity
 ```
+
 The volatile acid distribution looks bimodal with a positive skew.
 
 ```{r echo=FALSE}
-p.volatile.acidity.box <- ggplot(WD, aes(x = 1, y = volatile.acidity)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("volatile acidity  (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.volatile.acidity.box <- plot.box('volatile.acidity', WD, 'volatile acidity (g / dm^3)')
 
-grid.arrange(p.volatile.acidity, p.volatile.acidity.box, ncol=2)
+p.volatile.acidity.box
 
 print.n.outliers('volatile.acidity', WD)
 ```
@@ -266,14 +234,9 @@ spike at 0.25, this should be taken into account when discussing the citric acid
 data.
 
 ```{r echo=FALSE}
-p.citric.acid.box <- ggplot(WD, aes(x = 1, y = citric.acid)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("citric acid  (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.citric.acid.box <- plot.box('citric.acid', WD, 'citric acid (g / dm^3)')
 
-grid.arrange(p.citric.acid, p.citric.acid.box, ncol=2)
+p.citric.acid.box
 
 print.n.outliers('citric.acid', WD)
 ```
@@ -295,19 +258,15 @@ p.free.sulfur.dioxide
 ```
 
 ```{r echo=FALSE}
-p.free.sulfur.dioxide.box <- ggplot(WD, aes(x = 1, y = free.sulfur.dioxide)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("free sulfur dioxide  (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.free.sulfur.dioxide.box <- plot.box('free.sulfur.dioxide', WD, 
+                              'free sulfur dioxide (mg / dm^3)')
 
-grid.arrange(p.free.sulfur.dioxide, p.free.sulfur.dioxide.box, ncol=2)
+p.free.sulfur.dioxide.box
 
 print.n.outliers('free.sulfur.dioxide', WD)
 ```
 
-These outliers are believed to be valid measurements and are left in the dataset.
+These outliers are believed to be valid measurements and are left in the data set.
 
 ```{r echo=FALSE}
 p.total.sulfur.dioxide <- plot.hist('total.sulfur.dioxide', 
@@ -321,14 +280,11 @@ Total sulfur dioxide is again positively skewed. There are a few observations
 near 300 that look very far removed from the rest of the distribution. 
 
 ```{r echo=FALSE}
-p.total.sulfur.dioxide.box <- ggplot(WD, aes(x = 1, y = total.sulfur.dioxide)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("total sulfur dioxide  (g / dm^3)") + 
-                      scale_x_continuous(breaks = NULL)
+p.total.sulfur.dioxide.box <- plot.box('total.sulfur.dioxide', WD,
+                                       'total sulfur dioxide (mg / dm^3)')
 
-grid.arrange(p.total.sulfur.dioxide, p.total.sulfur.dioxide.box, ncol=2)
+
+p.total.sulfur.dioxide.box
 
 print.n.outliers('total.sulfur.dioxide', WD)
 ```
@@ -342,14 +298,41 @@ WD <- subset(WD, WD$total.sulfur.dioxide < 200)
 ```
 
 ```{r echo=FALSE}
-plot.hist('density', WD, .0005, 'density (g / cm^3)') +
+p.density <- plot.hist('density', WD, .0005, 'density (g / cm^3)') +
   scale_x_continuous()
 
-plot.hist('pH', WD, .05, 'pH') +
-  scale_x_continuous()
+p.density
 ```
 
-Density and pH are normally distributed.
+The density plot looks normally distributed.
+
+```{r echo=FALSE}
+p.density.box <- plot.box('density', WD,
+                          'density (g / cm^3)')
+
+p.density.box
+
+print.n.outliers('density', WD)
+
+```
+
+```{r echo=FALSE}
+p.pH <- plot.hist('pH', WD, .05, 'pH') +
+  scale_x_continuous()
+
+p.pH
+```
+
+The pH distribution looks slightly positively skewed.
+
+```{r echo=FALSE}
+p.pH.box <- plot.box('pH', WD,
+                     'pH')
+
+p.pH.box
+
+print.n.outliers('pH', WD)
+```
 
 
 Instead of looking at total sulfur dioxide and free sulfur dioxide a new 
@@ -366,31 +349,39 @@ p.sulfur.dioxide.ratio
 ```
 
 Sulfur dioxide ratio is normally distributed. The spike at 0.25 and possibly at 
-0.5 and 0.75 should be noted as possible measurement roundings.
+0.5 and 0.75 should be noted as possible measurement rounding.
 
 ```{r echo=FALSE}
-p.sulfur.dioxide.ratio.box <- ggplot(WD, aes(x = 1, y = sulfur.dioxide.ratio)) + 
-                      geom_jitter(alpha = 0.1) + 
-                      geom_boxplot(alpha = 0.2, color = 'red') + 
-                      xlab("") + 
-                      ylab("sulfur dioxide ratio") + 
-                      scale_x_continuous(breaks = NULL)
+p.sulfur.dioxide.ratio.box <- plot.box('sulfur.dioxide.ratio', WD, 
+                                       'sulfur dioxide ratio')
 
-grid.arrange(p.sulfur.dioxide.ratio, p.sulfur.dioxide.ratio.box, ncol=2)
+p.sulfur.dioxide.ratio.box
 
 print.n.outliers('sulfur.dioxide.ratio', WD)
 ```
 
-Other variables that may be of interest are the total acid content, and ratio's 
-of certain types of acid (fixed, volatile, and citric) to the total acid content.
-The way these acid amounts affect the the wine could lead to insights.
+A variable that may be of interest is the total acid content. This is created 
+by summing citric, volatile, and fixed acidity. 
 
 ```{r echo=FALSE}
 WD$total.acidity <- WD$citric.acid + WD$volatile.acidity + WD$fixed.acidity
-ggplot(aes(x = total.acidity), data = WD) + 
-  scale_x_log10() + 
-  xlab('log10(citric.acid + volatile.acidity + fixed.acidity)') + 
-  geom_histogram()
+
+p.total.acidity <- plot.hist('total.acidity', WD, .3, 
+                                    'total acidity (g / dm^3)')
+
+p.total.acidity
+```
+
+The total acidity distribution is again positively skewed. This could be 
+expected because the acid distributions were positively skewed as well.
+
+```{r echo=FALSE}
+p.total.acidity.box <- plot.box('total.acidity', WD, 
+                                'total acidity (g / dm^3)')
+
+p.total.acidity.box
+
+print.n.outliers('total.acidity', WD)
 ```
 
 To gain information about which variables affect wine quality the data has a 
@@ -466,6 +457,11 @@ quality variable with low, medium, and high quality wines being scored a
 Did you perform any operations on the data to tidy, adjust, or change the form \
 of the data? If so, why did you do this?
 
+An observation was removed because the citric acid content was much higher 
+than the rest of the distribution and was likely rounded up. Two observations 
+were removed because their total sulfur dioxide content was almost twice what 
+the next highest observation was. 
+
 Residual sugar, chlorides, sulphates, and sulfur dioxide are all positively 
 skewed long tailed data. 
 
@@ -495,35 +491,62 @@ acidity. Alcohol is positively correlated with pH and negatively correlated
 with total sulfur dioxide, chlorides and volatile acidity. These will be the 
 relationships the bivariate analysis focuses on.
 
+Plotting the correlated variables on box plots split by quality score can 
+provide insight into quality trends. 
+
 ```{r echo=FALSE}
 ggplot(data = WD, aes(x = quality, y = alcohol)) + 
   scale_x_discrete(limits = seq(3, 8)) + 
   geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+```
 
+Higher quality wine has a higher alcohol content
+
+
+```{r echo=FALSE}
 ggplot(data = WD, aes(x = quality, y = sulphates)) + 
   scale_x_discrete(limits = seq(3, 8)) + 
   geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+```
 
+The sulphate distribution contains many outliers for qualities of 5 or 6. The 
+trend for the median value is higher sulphate content correlates with higher 
+quality.
+
+```{r echo=FALSE}
 ggplot(data = WD, aes(x = quality, y = citric.acid)) + 
   scale_x_discrete(limits = seq(3, 8)) + 
   geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+```
 
+The citric acid content is clearly increasing as quality increases.
+
+```{r echo=FALSE}
 ggplot(data = WD, aes(x = quality, y = fixed.acidity)) + 
   scale_x_discrete(limits = seq(3, 8)) + 
   geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+```
 
+The fixed acidity plot is not revealing a clear trend related to quality.
+
+```{r echo=FALSE}
 ggplot(data = WD, aes(x = quality, y = total.acidity)) + 
   scale_x_discrete(limits = seq(3, 8)) + 
   geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
+```
 
+It is not clear from this box plot how total acidity relates to quality.
+
+```{r echo=FALSE}
 ggplot(data = WD, aes(x = quality, y = volatile.acidity)) + 
   scale_x_discrete(limits = seq(3, 8)) + 
   geom_boxplot(aes(group = cut_width(quality, 1)), outlier.alpha = 0.5)
 ```
 
-The box plots above give a clearer overview of how alcohol content, volatile 
-acidity, citric acid, and sulphates relate to quality. Visualizing these data 
-by overlaying the distribution's with box plots makes these relationships clearer.
+Volatile acid content is clearly decreasing as quality increases.
+
+Splitting the data into high and low quality and plotting a box plot over the 
+distribution makes these correlations clearer. 
 
 ```{r echo=FALSE}
 p1 <- ggplot(subset(WD, quality.grade=='low'), aes(volatile.acidity, x = 1)) +
@@ -546,6 +569,7 @@ p2 <- ggplot(subset(WD, quality.grade=='high'), aes(volatile.acidity, x = 1)) +
 
 
 grid.arrange(p1, p2)
+
 
 p1 <- ggplot(subset(WD, quality.grade=='low'), aes(alcohol, x = 1)) +
   geom_boxplot(color = 'red') +
@@ -589,6 +613,10 @@ p2 <- ggplot(subset(WD, quality.grade=='high'), aes(citric.acid, x = 1)) +
 
 grid.arrange(p1, p2)
 ```
+
+The plots above make the affects of volatile acidity, alcohol, and citric acidity 
+on quality clearer. High quality wines have a low volatile acidity, high alcohol 
+content and low citric acidity compared to low quality wines.
 
 The other variable of interest, alcohol, is a continuous variable and 
 better explored using scatter plots.
